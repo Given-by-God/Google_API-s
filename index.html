@@ -5,186 +5,26 @@
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link href="src/css/main.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="src/css/main.css">
     <script src="src/js/jquery-3.2.1.min.js"></script>
+    <script src="src/js/API_Google_Custom_Search.js"></script>
+    <script src="src/js/main..js"></script>
+    <script src="src/js/Google_API_SPEED_PAGE.js"></script>
+
     <title>Document</title>
 </head>
 <body>
 
-<!--API Google custom engine search-->
-<script>
-    (function () {
-
-        var cx = '011836373351653660494:nckphoguewa'; // Insert your own Custom Search Engine ID here
-        var gcse = document.createElement('script');
-        gcse.type = 'text/javascript';
-        gcse.async = true;
-        gcse.src = (document.location.protocol == 'https' ? 'https:' : 'http:') + '//www.google.com/cse/cse.js?cx=' + cx;
-        var s = document.getElementsByTagName('script')[0];
-        s.parentNode.insertBefore(gcse, s);
-
-    })();
-</script>
-
 <gcse:searchbox></gcse:searchbox>
 
-<div>
+<div id="search">
     <gcse:searchresults></gcse:searchresults>
 </div>
 
 </body>
 </html>
 
-<!--
-Скрипт,который ждет пока выполнится поисковый запрос.Поиск выполнился - DOM-дерево обновилось.
-Затем отправка 10 первых ссылок на сервер,там происходит обработка.После обработки происходит запуск
-API Google SPEED и вывод скорости в конце страницы
-
--->
-<script type="text/javascript">
-
-    //    Ждем полной загрузки DOM - дерева
-    window.onload = function () {
-
-//  Нажимаем на кнопку (она там единственная)
-        $('.gsc-search-button-v2').click(function () {
-
-            //Идет поиск  - поэтому ждем 2 сек(чтобы наверняка).
-            //Ну и берем первые 10 ссылок
-            setTimeout(function () {
-                var array = [];
-                var links = document.getElementsByTagName("a");
-
-                //счетчик от 2 - избавляемся от  гугловской рекламы,
-                //Плюс еще ссылки повторялись,что бы этого избежать -
-                // вбит костыль. И именно поэтому счетчик идет до 29.
-                //Но кладет он 10 ссылок.Только количество запросов
-                // должно быть не меньше 30,а так все нормально
-                for (var i = 2; i <= 29; i += 3) {
-                    array.push(links[i].href);
-                }
-                //массив ссылок
-                console.log(array);
 
 
-                //отправка на сервер,на обработку
-                $.ajax({
-                    method: "POST",
-                    url: "server.php",
-                    data: {links: JSON.stringify(array)}
-                })
-                //Принимаем обработанные данные c сервера
-                    .done(function (links) {
-                        console.log(links);
 
-                        var obj = JSON.parse(links);
-                        console.log(obj.length);
-
-//                      запуск api Google Speed
-//                     -------------------------------------
-                        var id;
-                        for (var i = 0; i < obj.length; i++) {
-                            id = setInterval(runPagespeed(obj[i]), 0);
-                        }
-
-                        setTimeout(clearInterval(id), 10000); //удаляем
-//                     ---------------------------------
-                    })
-
-                    .fail(function (jqXHR, textStatus) {
-                        alert("Request failed: " + textStatus);
-                    });
-
-            }, 2000);
-        });
-    };
-
-
-</script>
-
-
-<!--API Google SPEED-->
-<script>
-    // Specify your actual API key here:
-    var API_KEY = 'AIzaSyCFnpwFqfxNtWZC1_R2DT24ly4kliFU-1U';
-
-    // Specify the URL you want PageSpeed results for here:
-    var URL_TO_GET_RESULTS_FOR = ['https://www.yandex.com/', 'http://php.net'];
-
-    var API_URL = 'https://www.googleapis.com/pagespeedonline/v2/runPagespeed?';
-    var CHART_API_URL = 'http://chart.apis.google.com/chart?';
-
-    // Object that will hold the callbacks that process results from the
-    // PageSpeed Insights API.
-    var callbacks = {};
-
-    // Invokes the PageSpeed Insights API. The response will contain
-    // JavaScript that invokes our callback with the PageSpeed results.
-    function runPagespeed(URL_TO_GET_RESULTS_FOR) {
-        var s = document.createElement('script');
-        s.type = 'text/javascript';
-        s.async = true;
-        var query = [
-            'url=' + URL_TO_GET_RESULTS_FOR,
-            'callback=runPagespeedCallbacks',
-            'key=' + API_KEY
-        ].join('&');
-        s.src = API_URL + query;
-        document.head.insertBefore(s, null);
-    }
-
-    // Our JSONP callback. Checks for errors, then invokes our callback handlers.
-    function runPagespeedCallbacks(result) {
-
-//        console.log(result.ruleGroups.SPEED);
-        if (result.error) {
-            console.log('errors');
-            var errors = result.error.errors;
-            for (var i = 0, len = errors.length; i < len; ++i) {
-                if (errors[i].reason == 'badRequest' && API_KEY == 'AIzaSyCFnpwFqfxNtWZC1_R2DT24ly4kliFU-1U') {
-                    alert('Please specify your Google API key in the API_KEY variable.');
-                } else {
-                    // NOTE: your real production app should use a better
-                    // mechanism than alert() to communicate the error to the user.
-                    alert(errors[i].message);
-                }
-            }
-            return;
-        }
-
-        // Dispatch to each function on the callbacks object.
-        for (var fn in callbacks) {
-            var f = callbacks[fn];
-            if (typeof f == 'function') {
-                callbacks[fn](result);
-            }
-        }
-    }
-
-    // Invoke the callback that fetches results. Async here so we're sure
-    // to discover any callbacks registered below, but this can be
-    // synchronous in your code.
-
-
-    callbacks.displayPageSpeedScore = function (result) {
-        var score = result.ruleGroups.SPEED.score;
-        var link = result.id; //url  нашей ссылки
-
-//        console.log(result.ruleGroups.SPEED.score);
-//        console.log(result.id);
-
-
-        // Construct the query to send to the Google Chart Tools.
-        var query = [
-            'chtt=' + link,
-            'chs=180x100',
-            'cht=gom',
-            'chd=t:' + score,
-            'chxt=x,y',
-            'chxl=0:|' + score
-        ].join('&');
-        var i = document.createElement('img');
-        i.src = CHART_API_URL + query;
-        document.body.insertBefore(i, null);
-    };
-</script>
